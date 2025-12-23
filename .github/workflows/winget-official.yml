@@ -1,0 +1,33 @@
+name: Publish to WinGet (Official)
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  winget:
+    name: Publish with WingetCreate
+    runs-on: windows-latest
+    steps:
+      - name: Install WingetCreate
+        run: |
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Run Update
+        env:
+          GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          # 1. Get the version (Remove 'v' from tag)
+          $version = "${{ github.event.release.tag_name }}".TrimStart("v")
+          
+          # 2. Find the .exe URL from the release assets
+          $url = "${{ github.event.release.assets[0].browser_download_url }}"
+          
+          # 3. Add the x64 tag so it doesn't fail like before
+          $finalUrl = "$url|x64"
+
+          Write-Host "Publishing Version: $version"
+          Write-Host "URL: $finalUrl"
+
+          # 4. Run the official command
+          .\wingetcreate.exe update "Stardesk.Stardesk" --version $version --urls "$finalUrl" --token $env:GITHUB_TOKEN --submit
